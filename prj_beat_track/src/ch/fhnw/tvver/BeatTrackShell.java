@@ -248,6 +248,7 @@ public final class BeatTrackShell {
 				if(t.getCause() != null) t = t.getCause();
 				row += t.getClass().getName() + ":" + t.getMessage() + SEP;
 				report.println(row);
+				t.printStackTrace();
 			}
 			//System.out.println(COLUMNS);
 			System.out.println(row);

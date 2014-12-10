@@ -11,13 +11,13 @@ import org.jtransforms.fft.FloatFFT_1D;
 public class FFTBeatDetection extends AbstractBeatTracker {
 
 	
-	final static int SUBBAND_SIZE = 32;
+	final static int SUBBAND_SIZE = 16;
 	final static int HISTORY_SIZE = 43;
 	final static int BUFFER_SIZE = 1024;
 	
-	final static int C = 250;
+	final static float C = 5f;
 	
-	// 1024 / 32 = 127
+	// 1024 / 32 = 32
 	final static int NUMBER_OF_SUBBANDS = BUFFER_SIZE / SUBBAND_SIZE;
 	
 	// usually 32 / 1024 = 0.03125
@@ -32,12 +32,22 @@ public class FFTBeatDetection extends AbstractBeatTracker {
 	public FFTBeatDetection(File track)throws UnsupportedAudioFileException, IOException {
 		super(track, EnumSet.of(Flags.REPORT));		
 		
+		
+
+		
 		//setup subbands amplitudes (Es) + subband history (Ei) + sample buffer for later use...		
 		Ei = new float[ NUMBER_OF_SUBBANDS ][ HISTORY_SIZE ];
 		EiIndexes = new int[ NUMBER_OF_SUBBANDS ];		
 		buffer = new float[ BUFFER_SIZE ];
 		
-		magicNumber = NUMBER_OF_SUBBANDS / BUFFER_SIZE;
+		magicNumber = ((float)NUMBER_OF_SUBBANDS) / BUFFER_SIZE;
+		
+		System.out.println("SUBBAND_SIZE:"+SUBBAND_SIZE);
+		System.out.println("HISTORY_SIZ:"+HISTORY_SIZE);
+		System.out.println("BUFFER_SIZE:"+BUFFER_SIZE);
+		System.out.println("C:"+C);
+		System.out.println("NUMBER_OF_SUBBANDS:"+NUMBER_OF_SUBBANDS);
+		System.out.println("magicNumber:"+magicNumber);
 		
 	}
 	
@@ -84,32 +94,24 @@ public class FFTBeatDetection extends AbstractBeatTracker {
 					
 					//calculate amplitude of subband ------------------------
 					int subbandIndex = ( i / SUBBAND_SIZE );
-					//System.out.println(subbandIndex);
 					
 					//Es[ subbandIndex ] += B[i];
 					Es[ subbandIndex ] += re*re + im*im;
-//					System.out.println( buffer[i] );
-//					System.out.println( re +" + i * " + im );
 
-//					System.out.println( re*re + im*im );
-					
-					
-					//System.out.println( (i+1) % SUBBAND_SIZE );
 					// switch to next subband					
 					if( (i+1) % SUBBAND_SIZE == 0){
 						
 						//set average amplitude of this subband
-						
 						//TODO: infinity bug...
-						if(Es[ subbandIndex ] != 0 ) Es[ subbandIndex ] /= magicNumber;
-						//if(Float.isInfinite(Es[ subbandIndex ]))Es[ subbandIndex ] = 0;
+						if(Es[ subbandIndex ] != 0 ) Es[ subbandIndex ] *= magicNumber;
+
 						
 						float averageEI = this.calculateHistoryAverage( subbandIndex ); 
 						
 						//has subband a beat?
 						if( Es[ subbandIndex ] > C * averageEI ){
 							isBeat = true;
-							System.out.println(Es[ subbandIndex ] +">"+ (C * averageEI));
+							//System.out.println(Es[ subbandIndex ] +">"+ (C * averageEI));
 						}
 						
 						//System.out.println(Es[ subbandIndex ] +">"+ (C * averageEI));
@@ -139,7 +141,7 @@ public class FFTBeatDetection extends AbstractBeatTracker {
 		for (int i = 0; i < HISTORY_SIZE; i++) {
 			averageEI += Ei[ subband ][ i ]; 
 		}
-		return ( averageEI > 0 )? averageEI/HISTORY_SIZE : 0;
+		return averageEI/HISTORY_SIZE;
 	}
 	
 	private void addAmplitudeToHistory( int subband, float amplitude ){
@@ -148,7 +150,7 @@ public class FFTBeatDetection extends AbstractBeatTracker {
 		
 		//update index
 		EiIndexes[ subband ]++;
-		if( EiIndexes[ subband ] >= NUMBER_OF_SUBBANDS ) EiIndexes[ subband ] = 0;
+		if( EiIndexes[ subband ] >= HISTORY_SIZE ) EiIndexes[ subband ] = 0;
 	}
 	
 	
