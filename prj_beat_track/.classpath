@@ -2,7 +2,11 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
-	<classpathentry kind="lib" path="lib/cut2col-v34c.jar"/>
+	<classpathentry kind="lib" path="lib/cut2col-v34c.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/prj_beat_track/lib/JTransforms-3.0-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="lib" path="lib/jl1.0.jar"/>
 	<classpathentry kind="lib" path="lib/JLargeArrays-1.2.jar"/>
 	<classpathentry kind="lib" path="lib/JTransforms-3.0-javadoc.jar"/>
