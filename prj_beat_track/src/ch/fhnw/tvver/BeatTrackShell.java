@@ -176,22 +176,22 @@ public final class BeatTrackShell {
 		String result = "";
 
 		double avgLat = numDetectedBeats == 0 ? 0 : sumLat / numDetectedBeats;
-		result += time + SEP;
+//		result += time + SEP;
 		result += numRefBeats + SEP;
-		result += + (60 * numRefBeats) / time + SEP;
+//		result += + (60 * numRefBeats) / time + SEP;
 		result += + numTrueDetectedBeats + SEP;
 		result += + numFalseDetectedBeats + SEP;
-		result += + (int)(minLat * 1000) + SEP;
-		result += (int)(maxLat * 1000) + SEP;
-		result += (int)(avgLat * 1000) + SEP;
+//		result += + (int)(minLat * 1000) + SEP;
+//		result += (int)(maxLat * 1000) + SEP;
+//		result += (int)(avgLat * 1000) + SEP;
 
 		double latency       = maxLat;
 		double detectedBeats = Math.max(numTrueDetectedBeats - numFalseDetectedBeats, 0); 
 		double q             = detectedBeats / numRefBeats;
 		double l             = latency < MAX_LATENCY ? latency / MAX_LATENCY : 1;
 
-		result += q + SEP;
-		result += l + SEP;
+//		result += q + SEP;
+//		result += l + SEP;
 		result += (1 + (5 * Math.min(q / l, 1))) + SEP;
 
 		return result;

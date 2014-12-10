@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<launchConfiguration type="org.eclipse.jdt.launching.localJavaApplication">
+<listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
+<listEntry value="/prj_beat_track/src/ch/fhnw/tvver/BeatTrackShell.java"/>
+</listAttribute>
+<listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_TYPES">
+<listEntry value="1"/>
+</listAttribute>
+<stringAttribute key="org.eclipse.jdt.launching.MAIN_TYPE" value="ch.fhnw.tvver.BeatTrackShell"/>
+<stringAttribute key="org.eclipse.jdt.launching.PROGRAM_ARGUMENTS" value="../prj_beat_track_samples/astral_projection-neurocity.mp3 StatisticalStreamingBeatDetection"/>
+<stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="prj_beat_track"/>
+</launchConfiguration>
