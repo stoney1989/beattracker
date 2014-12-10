@@ -8,6 +8,8 @@ Desktop.ini
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
 
+prj_beat_track_samples/*
+
 # Windows Installer files
 *.cab
 *.msi
