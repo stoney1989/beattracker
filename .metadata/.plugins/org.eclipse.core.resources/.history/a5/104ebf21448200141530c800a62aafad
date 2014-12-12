@@ -1,0 +1,88 @@
+package tools;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.EventQueue;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.geom.Line2D;
+import java.util.ArrayList;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.ScrollPaneConstants;
+import javax.swing.border.BevelBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.SoftBevelBorder;
+
+public class Vis extends JFrame {
+
+	private JPanel contentPane;
+	JPanel panel;
+	
+
+	/**
+	 * Launch the application.
+	 */
+	public static void main(String[] args) {
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					Vis frame = new Vis();
+					frame.setVisible(true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+
+
+	ArrayList<Float> samples = new ArrayList<>();
+	public void addSample( float[] sample ){
+		//samples.addAll( Arrays.asList(sample) );
+		for (int i = 0; i < sample.length; i++) {
+			samples.add( sample[i] );
+		}
+		System.out.println(samples.size());
+		if( samples.size() >= panel.getWidth() ){
+			panel.setBounds(panel.getX(), panel.getY(), panel.getWidth()*2, panel.getHeight());
+			panel.repaint();
+		}
+	}
+	
+	 @Override
+	 public void paint(Graphics g){
+	       super.paint(g); 
+	       for (int i = 0; i < samples.size()-1; i++) {
+	    	   Graphics2D g2 = (Graphics2D) g;
+	           Line2D lin = new Line2D.Float(i, samples.get(i)*200, i+1, samples.get(i+1)*200);
+	           g2.draw(lin);
+	       }
+	 }
+	
+	
+	/**
+	 * Create the frame.
+	 */
+	public Vis() {
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setBounds(100, 100, 903, 311);
+		contentPane = new JPanel();
+		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+		contentPane.setLayout(new BorderLayout(0, 0));
+		setContentPane(contentPane);
+		
+		JScrollPane scrollPane = new JScrollPane();
+		scrollPane.setViewportBorder(new SoftBevelBorder(BevelBorder.LOWERED, null, null, null, null));
+		scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+		scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
+		contentPane.add(scrollPane, BorderLayout.CENTER);
+		
+		panel = new JPanel();
+		panel.setBackground(Color.DARK_GRAY);
+		scrollPane.setViewportView(panel);
+	}
+
+}

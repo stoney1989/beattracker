@@ -1,0 +1,72 @@
+package ch.fhnw.tvver;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
+
+import javax.sound.sampled.UnsupportedAudioFileException;
+
+import org.jtransforms.fft.FloatFFT_1D;
+
+import ddf.minim.analysis.FFT;
+
+public class BetterFFTBeatDetection extends AbstractBeatTracker {
+	
+	  public static final int THRESHOLD_WINDOW_SIZE = 10;
+	   public static final float MULTIPLIER = 1.5f;
+
+	public BetterFFTBeatDetection(File track)
+			throws UnsupportedAudioFileException, IOException {
+		super(track, EnumSet.of(Flags.REPORT));
+
+	}
+
+	@Override
+	public void run() {
+
+		FFT fft = new FFT(1024, 44100);
+		fft.window(FFT.HAMMING);
+		float[] samples = new float[1024];
+		float[] spectrum = new float[1024 / 2 + 1];
+		float[] lastSpectrum = new float[1024 / 2 + 1];
+		List<Float> spectralFlux = new ArrayList();
+		List<Float> threshold = new ArrayList();
+
+		try {
+
+			while (getSamples(samples)) {
+
+				fft.forward(samples);
+				System.arraycopy(spectrum, 0, lastSpectrum, 0, spectrum.length);
+				System.arraycopy(fft.getSpectrumReal(), 0, spectrum, 0,	spectrum.length);
+
+				float flux = 0;
+				for (int i = 0; i < spectrum.length; i++) {
+					float value = (spectrum[i] - lastSpectrum[i]);
+					flux += value < 0 ? 0 : value;
+				}
+				spectralFlux.add(flux);
+
+			}
+			
+			for( int i = 0; i < spectralFlux.size(); i++ )
+		      {
+		         int start = Math.max( 0, i - THRESHOLD_WINDOW_SIZE );
+		         int end = Math.min( spectralFlux.size() - 1, i + THRESHOLD_WINDOW_SIZE );
+		         float mean = 0;
+		         for( int j = start; j <= end; j++ )
+		            mean += spectralFlux.get(j);
+		         mean /= (end - start);
+		         threshold.add( mean * MULTIPLIER );
+		      }
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+
+}

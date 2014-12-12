@@ -6,8 +6,6 @@ import java.util.EnumSet;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
 
-import ch.fhnw.tvver.AbstractBeatTracker.Flags;
-
 public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 
 	public StatisticalStreamingBeatDetection(File track)throws UnsupportedAudioFileException, IOException {
