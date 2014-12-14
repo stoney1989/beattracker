@@ -69,7 +69,7 @@ public class FFTBeatDetection extends AbstractBeatTracker {
 				FloatFFT_1D fft_do = new FloatFFT_1D(buffer.length);
 				float[] fft = new float[buffer.length * 2];
 				System.arraycopy(buffer, 0, fft, 0, buffer.length);
-				fft_do.realForward( fft );				
+				fft_do.complexForward( fft );				
 		
 				//calculate...
 				// frequency amplitudes (B)

@@ -88,7 +88,7 @@ public class Vis extends JFrame {
 		updatePaneWidth( fft_re.size() );		
 	}
 	
-	int frequency = 44100;
+	int frequency;
 	public void setFrequency(int frequency){
 		this.frequency = frequency;
 	}
@@ -230,7 +230,7 @@ public class Vis extends JFrame {
 		    	   //System.out.println(textBeat.length());
 		    	   for (int i = from; i < to; i++) {
 		    		   //System.out.print(textBeat.get(i));
-		    		   if( i % frequency == 0){
+		    		   if( i % 44100 == 0){
 		    			   gp1.moveTo(i, mul);
 		    			   gp1.lineTo(i, 0);
 //		    			   gp1.lineTo(i-44100, 0);

@@ -39,7 +39,7 @@ public class BetterFFTBeatDetection extends AbstractBeatTracker {
 			v.setVisible(true);
 			
 			v.addTextBeat(beats);
-			v.setFrequency((int) freq);
+			v.setFrequency(freq);
 			
 			
 			while (getSamples( sample )) {

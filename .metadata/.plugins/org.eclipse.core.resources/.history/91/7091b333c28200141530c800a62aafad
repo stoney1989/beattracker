@@ -30,7 +30,7 @@ public class BetterFFTBeatDetection extends AbstractBeatTracker {
 		BitSet                beats          = new BitSet();
 		double                freq           = getSampleRate();
 		for(double beat : getRefBeats()) beats.set((int) ((beat) * freq));
-//		System.out.println(freq);
+		System.out.println(freq);
 //		int sampleCount = 0;
 
 
@@ -39,7 +39,7 @@ public class BetterFFTBeatDetection extends AbstractBeatTracker {
 			v.setVisible(true);
 			
 			v.addTextBeat(beats);
-			v.setFrequency((int) freq);
+			
 			
 			
 			while (getSamples( sample )) {

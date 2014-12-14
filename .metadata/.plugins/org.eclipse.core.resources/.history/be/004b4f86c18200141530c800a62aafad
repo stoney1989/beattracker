@@ -88,7 +88,7 @@ public class Vis extends JFrame {
 		updatePaneWidth( fft_re.size() );		
 	}
 	
-	int frequency = 44100;
+	int frequency;
 	public void setFrequency(int frequency){
 		this.frequency = frequency;
 	}
@@ -217,39 +217,11 @@ public class Vis extends JFrame {
 				       g2D.draw(gp1);
 			       }
 			       
-			       //frequency border
-				     
-		    	   g.setColor(Color.white);
-		    	   
-		    	   Stroke oldStroke = g2D.getStroke();
-		    	   g2D.setStroke(new BasicStroke(20));
-		    	  		    	   
-		    	   gp1 = new GeneralPath();			       
-		    	   gp1.moveTo(from, mul);
-		    	   
-		    	   //System.out.println(textBeat.length());
-		    	   for (int i = from; i < to; i++) {
-		    		   //System.out.print(textBeat.get(i));
-		    		   if( i % frequency == 0){
-		    			   gp1.moveTo(i, mul);
-		    			   gp1.lineTo(i, 0);
-//		    			   gp1.lineTo(i-44100, 0);
-//		    			   gp1.lineTo(i-44100, mul*2);
-		    			   gp1.lineTo(i, mul*2);
-		    			   //System.out.println(i);
-		    		   }
-			       }
-		    	   gp1.moveTo(from, mul);
-			       gp1.closePath();			       
-			       g2D.draw(gp1);
-			       g2D.setStroke(oldStroke);
-		       
-			       
 			       //beats from text file
 			       if(chckbxBeatFrom.isSelected()){
 			    	   g.setColor(Color.yellow);
 			    	   
-			    	   oldStroke = g2D.getStroke();
+			    	   Stroke oldStroke = g2D.getStroke();
 			    	   g2D.setStroke(new BasicStroke(10));
 			    	  
 			    	   
@@ -275,7 +247,33 @@ public class Vis extends JFrame {
 				       g2D.setStroke(oldStroke);
 			       }
 			       
+			       //frequency border
 			     
+			    	   g.setColor(Color.white);
+			    	   
+			    	   Stroke oldStroke = g2D.getStroke();
+			    	   g2D.setStroke(new BasicStroke(20));
+			    	  		    	   
+			    	   gp1 = new GeneralPath();			       
+			    	   gp1.moveTo(from, mul);
+			    	   
+			    	   //System.out.println(textBeat.length());
+			    	   for (int i = from; i < to; i++) {
+			    		   //System.out.print(textBeat.get(i));
+			    		   if( i % 44100 == 0){
+			    			   gp1.moveTo(i, mul);
+			    			   gp1.lineTo(i, 0);
+//			    			   gp1.lineTo(i-44100, 0);
+//			    			   gp1.lineTo(i-44100, mul*2);
+			    			   gp1.lineTo(i, mul*2);
+			    			   //System.out.println(i);
+			    		   }
+				       }
+			    	   gp1.moveTo(from, mul);
+				       gp1.closePath();			       
+				       g2D.draw(gp1);
+				       g2D.setStroke(oldStroke);
+			       
   
 			     //frequencyborder
 			       

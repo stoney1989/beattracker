@@ -11,7 +11,7 @@ import org.jtransforms.fft.FloatFFT_1D;
 public class FFTBeatDetection extends AbstractBeatTracker {
 
 	
-	final static int SUBBAND_SIZE = 16;
+	final static int SUBBAND_SIZE = 8;
 	final static int HISTORY_SIZE = 43;
 	final static int BUFFER_SIZE = 1024;
 	
