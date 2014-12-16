@@ -10,10 +10,7 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 	
 	final  int    FREQ      = (int)getSampleRate();
 	final  int   TIME_SIZE  = 1024;
-	final  float TIME_LIMIT = 0.3f;
-	
-//	final  int   TIME_SIZE  = 1024;
-//	final  float TIME_LIMIT = 0.17f;
+	final  float TIME_LIMIT = 10;
 	
 	private float[] energyHistory;
 	private float[] differenceHistory;
@@ -36,9 +33,13 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 		 energyHistoryIndex     = 0;
 		 differenceHistoryIndex = 0;
 		 time = 0;
-		 dTime  = (float) TIME_SIZE / FREQ; 
+		 dTime  = TIME_SIZE / FREQ; 
 	}
 	
+	
+	
+	
+	private static float c = 1.3f;
 	
 	@Override
 	public void run() {
@@ -60,13 +61,8 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 				
 				time += dTime;
 				
-				//System.out.println(time);
-				
-								
-				if( time >= TIME_LIMIT && diffdiff > 0 && e > 2 ){
-					time = 0;
-					beat();
-					//isBeat = true;
+				if( time < TIME_LIMIT ){
+										
 				}
 				
 				

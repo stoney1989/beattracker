@@ -10,10 +10,7 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 	
 	final  int    FREQ      = (int)getSampleRate();
 	final  int   TIME_SIZE  = 1024;
-	final  float TIME_LIMIT = 0.3f;
-	
-//	final  int   TIME_SIZE  = 1024;
-//	final  float TIME_LIMIT = 0.17f;
+	final  float TIME_LIMIT = 10;
 	
 	private float[] energyHistory;
 	private float[] differenceHistory;
@@ -24,9 +21,7 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 	private int differenceHistoryIndex;
 	
 	private float time;
-	private float dTime;
 	
-	private boolean isBeat = false;
 
 	public StatisticalStreamingBeatDetection(File track)throws UnsupportedAudioFileException, IOException {
 		super(track, EnumSet.of(Flags.REPORT, Flags.WAVE));
@@ -36,9 +31,12 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 		 energyHistoryIndex     = 0;
 		 differenceHistoryIndex = 0;
 		 time = 0;
-		 dTime  = (float) TIME_SIZE / FREQ; 
 	}
 	
+	
+	
+	
+	private static float c = 1.3f;
 	
 	@Override
 	public void run() {
@@ -58,16 +56,7 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 				
 				float diffdiff = (float)Math.max(d - D, 0);
 				
-				time += dTime;
-				
-				//System.out.println(time);
-				
-								
-				if( time >= TIME_LIMIT && diffdiff > 0 && e > 2 ){
-					time = 0;
-					beat();
-					//isBeat = true;
-				}
+				float dTime = FREQ / TIME_SIZE; 
 				
 				
 				addToHistory(e, energyHistory, energyHistoryIndex);
@@ -132,7 +121,7 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 		return (float) Math.sqrt(e) * 100;
 	}
 	
-	private float calculateVariance(float E){
+	private static float calculateVariance(float E){
 		float V = 0;
 		for (int i = 0; i < energyHistory.length; i++) {
 				V += (float)Math.pow( energyHistory[i]-E, 2);	

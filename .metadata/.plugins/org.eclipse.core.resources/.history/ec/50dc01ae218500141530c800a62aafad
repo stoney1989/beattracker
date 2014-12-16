@@ -12,9 +12,6 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 	final  int   TIME_SIZE  = 1024;
 	final  float TIME_LIMIT = 0.3f;
 	
-//	final  int   TIME_SIZE  = 1024;
-//	final  float TIME_LIMIT = 0.17f;
-	
 	private float[] energyHistory;
 	private float[] differenceHistory;
 	

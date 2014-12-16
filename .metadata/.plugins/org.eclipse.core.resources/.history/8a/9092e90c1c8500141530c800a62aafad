@@ -8,42 +8,29 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 	
-	final  int    FREQ      = (int)getSampleRate();
-	final  int   TIME_SIZE  = 1024;
-	final  float TIME_LIMIT = 0.3f;
+	final  int FREQ      = (int)getSampleRate();
+	final  int TIME_SIZE = 1024;
 	
-//	final  int   TIME_SIZE  = 1024;
-//	final  float TIME_LIMIT = 0.17f;
-	
-	private float[] energyHistory;
-	private float[] differenceHistory;
-	
-	private float[] buffer;
-	
-	private int energyHistoryIndex;
-	private int differenceHistoryIndex;
-	
-	private float time;
-	private float dTime;
-	
-	private boolean isBeat = false;
+	private static float[] energyHistory;
+	private static float[] differenceHistory;
+	private static int historyIndex;
 
 	public StatisticalStreamingBeatDetection(File track)throws UnsupportedAudioFileException, IOException {
 		super(track, EnumSet.of(Flags.REPORT, Flags.WAVE));
-		 buffer            = new float[ TIME_SIZE ];
 		 energyHistory     = new float[ FREQ / TIME_SIZE ];
 		 differenceHistory = new float[ FREQ / TIME_SIZE ];
-		 energyHistoryIndex     = 0;
-		 differenceHistoryIndex = 0;
-		 time = 0;
-		 dTime  = (float) TIME_SIZE / FREQ; 
+		 historyIndex = 0;
 	}
 	
+	
+	
+	
+	private static float c = 1.3f;
 	
 	@Override
 	public void run() {
 		//System.out.println("asdfasdfasfd");
-		
+		float[] buffer = new float[1024];
 		
 		try {
 			while( getSamples(buffer) ){
@@ -53,25 +40,12 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 				float V = calculateVariance(E);
 				float C = (-0.0025714f * V) + 1.5142857f;
 				
-				float d = (float)Math.max(e - C * E, 0);				
-				float D = calculateAverageDifference();
-				
-				float diffdiff = (float)Math.max(d - D, 0);
-				
-				time += dTime;
-				
-				//System.out.println(time);
-				
-								
-				if( time >= TIME_LIMIT && diffdiff > 0 && e > 2 ){
-					time = 0;
-					beat();
-					//isBeat = true;
-				}
+				float diff = (float)Math.max(e - C * E, 0);
 				
 				
-				addToHistory(e, energyHistory, energyHistoryIndex);
-				addToHistory(d, differenceHistory, differenceHistoryIndex);
+				
+				
+				addEnergyToHistory(e);
 				//addBufferToHistory(buffer);
 				
 				//if(e > (c*E))System.out.println( "Sound Energy: "+e+" Energy Average: "+(c*E) );
@@ -96,23 +70,18 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 		return E / energyHistory.length;
 	}
 	
-	private float calculateAverageDifference(){
-		float D = 0;		
-		int countNonZero = 0;
-		for (int i = 0; i < differenceHistory.length; i++) {
-			if( differenceHistory[i] > 0 ){
-				D += differenceHistory[i];
-				countNonZero++;
-			}			
+	private float calculateGlobalAverageDifference(){
+		float E = 0;		
+		for (int i = 0; i < energyHistory.length; i++) {		
+			E += energyHistory[i];
 		}
-						
-		return (countNonZero>0)? D / countNonZero : 0;
+		return E / energyHistory.length;
 	}
 	
-	private static void addToHistory( float e, float[] history, int index ){		
-		history[ index ] = e;
-		index++;
-		if( index >= history.length )index = 0;
+	private void addEnergyToHistory( float e ){		
+		energyHistory[ historyIndex ] = e;
+		historyIndex++;
+		if( historyIndex >= energyHistory.length )historyIndex = 0;
 	}
 	
 //	private void addBufferToHistory( float[] buffer ){
@@ -132,7 +101,7 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 		return (float) Math.sqrt(e) * 100;
 	}
 	
-	private float calculateVariance(float E){
+	private static float calculateVariance(float E){
 		float V = 0;
 		for (int i = 0; i < energyHistory.length; i++) {
 				V += (float)Math.pow( energyHistory[i]-E, 2);	
