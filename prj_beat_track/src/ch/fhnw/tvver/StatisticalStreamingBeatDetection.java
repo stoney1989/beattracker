@@ -9,11 +9,32 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 	
 	final  int    FREQ      = (int)getSampleRate();
-	final  int   TIME_SIZE  = 1024;
-	final  float TIME_LIMIT = 0.3f;
-	
+
+// score: 2.5
 //	final  int   TIME_SIZE  = 1024;
-//	final  float TIME_LIMIT = 0.17f;
+//	final  float TIME_LIMIT = 0.3f;	
+//	final static int MAGIC_MULTIPLIER = 10;
+	
+//score: 2.8076863
+//	final  int   TIME_SIZE  = 512;
+//	final  float TIME_LIMIT = 0.4f;
+//	final static float MAGIC_MULTIPLIER = 10.5f;
+	
+// score: 2.885
+//	final  int   TIME_SIZE  = 1024;
+//	final  float TIME_LIMIT = 0.4f;
+//	final static int MAGIC_MULTIPLIER = 10;
+
+// score: 2.9640708
+//	final  int   TIME_SIZE  = 1024;
+//	final  float TIME_LIMIT = 0.4f;
+//	final static float MAGIC_MULTIPLIER = 10.5f;
+	
+// score: 3.0089693	
+	final  int   TIME_SIZE  = 2048;
+	final  float TIME_LIMIT = 0.2f;
+	final static float MAGIC_MULTIPLIER = 8f;
+
 	
 	private float[] energyHistory;
 	private float[] differenceHistory;
@@ -29,7 +50,7 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 	private boolean isBeat = false;
 
 	public StatisticalStreamingBeatDetection(File track)throws UnsupportedAudioFileException, IOException {
-		super(track, EnumSet.of(Flags.REPORT, Flags.WAVE));
+		super(track, EnumSet.of(Flags.REPORT));
 		 buffer            = new float[ TIME_SIZE ];
 		 energyHistory     = new float[ FREQ / TIME_SIZE ];
 		 differenceHistory = new float[ FREQ / TIME_SIZE ];
@@ -129,7 +150,7 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 			e+=buffer[i]*buffer[i];
 		}
 		e/=buffer.length; 
-		return (float) Math.sqrt(e) * 100;
+		return (float) Math.sqrt(e) * MAGIC_MULTIPLIER;
 	}
 	
 	private float calculateVariance(float E){

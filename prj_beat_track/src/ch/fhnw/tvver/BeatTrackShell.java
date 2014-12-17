@@ -40,6 +40,9 @@ public final class BeatTrackShell {
 	private byte[]                      pcmOut = new byte[64 * 1024];
 	private int                         pcmSize;
 	private int                         samplePos;
+	
+	private static  float averageScore = 0;
+	private static  int   scores = 0;
 
 	BeatTrackShell(File track, EnumSet<Flags> flags) throws UnsupportedAudioFileException, IOException {
 		this.flags = flags;
@@ -192,8 +195,12 @@ public final class BeatTrackShell {
 
 //		result += q + SEP;
 //		result += l + SEP;
-		result += (1 + (5 * Math.min(q / l, 1))) + SEP;
+		float score = (float)( (1 + (5 * Math.min(q / l, 1))) );
+		result += score + SEP;
 
+		averageScore += score;
+		scores++;
+		
 		return result;
 	}
 
@@ -230,6 +237,8 @@ public final class BeatTrackShell {
 			run(cls, report, src);
 
 		report.close();
+		
+		System.out.println("average score: "+(averageScore/(float)scores));
 	}
 
 	private static void run(Class<AbstractBeatTracker> cls, PrintWriter report, File file) {

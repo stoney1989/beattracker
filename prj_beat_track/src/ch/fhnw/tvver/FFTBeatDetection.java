@@ -6,48 +6,42 @@ import java.util.EnumSet;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
 
-import org.jtransforms.fft.FloatFFT_1D;
+import ddf.minim.analysis.FFT;
 
 public class FFTBeatDetection extends AbstractBeatTracker {
 
+	final  int   FREQ       = (int)getSampleRate();
 	
-	final static int SUBBAND_SIZE = 16;
-	final static int HISTORY_SIZE = 43;
-	final static int BUFFER_SIZE = 1024;
+//	//score: 2.4885497	
+//	final  int   TIME_SIZE  = 1024;
+//	final  float TIME_LIMIT = 0.4f;	
+//	final static float MAGIC_MULTIPLIER = 1f;
+//	final boolean USE_WINDOW = false;
+//	final int MIN_BANDWIDTH = 60;
+//	final int BANDS_PER_OCTAVE = 3;
+//	final int MODUS = 1;
 	
-	final static float C = 3f;
+// score: 2.918827	
+//	final  int   TIME_SIZE  = 2048;
+//	final  float TIME_LIMIT = 0.4f;	
+//	final static float MAGIC_MULTIPLIER = 1f;
+//	final boolean USE_WINDOW = false;
+//	final int MIN_BANDWIDTH = 43;
+//	final int BANDS_PER_OCTAVE = 1;
+//	final int MODUS = 1;
 	
-	// 1024 / 32 = 32
-	final static int NUMBER_OF_SUBBANDS = BUFFER_SIZE / SUBBAND_SIZE;
-	
-	// usually 32 / 1024 = 0.03125
-	private float magicNumber;
-	
-	
-	private float[][] Ei;
-	private int[] EiIndexes;
-	private float[] buffer; 
-	
+	final  int   TIME_SIZE  = 2048;
+	final  float TIME_LIMIT = 0.4f;	
+	final static float MAGIC_MULTIPLIER = 1f;
+	final boolean USE_WINDOW = false;
+	final int MIN_BANDWIDTH = 30;
+	final int BANDS_PER_OCTAVE = 2;
+	final int MODUS = 1;
 	
 	public FFTBeatDetection(File track)throws UnsupportedAudioFileException, IOException {
 		super(track, EnumSet.of(Flags.REPORT));		
 		
 		
-
-		
-		//setup subbands amplitudes (Es) + subband history (Ei) + sample buffer for later use...		
-		Ei = new float[ NUMBER_OF_SUBBANDS ][ HISTORY_SIZE ];
-		EiIndexes = new int[ NUMBER_OF_SUBBANDS ];		
-		buffer = new float[ BUFFER_SIZE ];
-		
-		magicNumber = ((float)NUMBER_OF_SUBBANDS) / BUFFER_SIZE;
-		
-		System.out.println("SUBBAND_SIZE:"+SUBBAND_SIZE);
-		System.out.println("HISTORY_SIZ:"+HISTORY_SIZE);
-		System.out.println("BUFFER_SIZE:"+BUFFER_SIZE);
-		System.out.println("C:"+C);
-		System.out.println("NUMBER_OF_SUBBANDS:"+NUMBER_OF_SUBBANDS);
-		System.out.println("magicNumber:"+magicNumber);
 		
 	}
 	
@@ -57,78 +51,119 @@ public class FFTBeatDetection extends AbstractBeatTracker {
 	
 	@Override
 	public void run() {
-		
-		//see:
-		// http://archive.gamedev.net/archive/reference/programming/features/beatdetection/index.html
-		// http://gamedev.stackexchange.com/questions/9761/beat-detection-and-fft
-							
-		
-		try {
-			while( getSamples(buffer) ){			
+		try{
+			
+			float[] buffer = new float[TIME_SIZE];
+			FFT fft = new FFT(TIME_SIZE,FREQ);
+			if(USE_WINDOW)fft.window( FFT.HAMMING );
+			fft.logAverages(MIN_BANDWIDTH, BANDS_PER_OCTAVE); //?
+			
+			int bands = fft.avgSize();
+			boolean[] onSetBuffer = new boolean[ bands];
+			float[][] freqBandEnergyHistory     = new float[ bands ][ FREQ / TIME_SIZE ];
+			float[][] freqBandDifferenceHistory = new float[ bands ][ FREQ / TIME_SIZE ];			
+			float[] timeBand = new float[ bands ];
+			
+			float dTime = (float) TIME_SIZE / FREQ; 
+			
+			int insertAt = 0;
+			
+			while( getSamples(buffer) ){
 				
-				FloatFFT_1D fft_do = new FloatFFT_1D(buffer.length);
-				float[] fft = new float[buffer.length * 2];
-				System.arraycopy(buffer, 0, fft, 0, buffer.length);
-				fft_do.realForward( fft );				
-		
-				//calculate...
-				// frequency amplitudes (B)
-				// amplitudes of subbands (Es) 
-				// subband history buffer (Ei)
-				// average history amplitude <Ei>
-				// aschis mom
-				
-				//float[] B = new float[ buffer.length ];
-				float[] Es = new float[ NUMBER_OF_SUBBANDS  ];
-				boolean isBeat = false;
-				
-				for (int i = 0; i < fft.length / 2; i++) {
-					int index = i*2;
-					float re = fft[ index    ];
-					float im = fft[ index + 1];
+				fft.forward( buffer );
+				//float instant, E, V, C, diff, dAvg, diff2;
+				for (int i = 0; i < freqBandEnergyHistory.length; i++) {
+					float e = fft.getAvg(i);
 					
-					//calculate amplitude
-					// X[k] = a + j·b
-					// E[k] = |X[k]|^2 = (a+j·b)·(a-j·b) = a·a + b·b
-					//B[i] = re*re + im*im;		
+					float E = 0;
+					for (int j = 0; j < freqBandEnergyHistory.length; j++) {
+						E += freqBandEnergyHistory[i][j];
+					}
+					E /= freqBandEnergyHistory.length;
 					
-					//calculate amplitude of subband ------------------------
-					int subbandIndex = ( i / SUBBAND_SIZE );
+					float V = 0;
+					for (int j = 0; j < freqBandEnergyHistory.length; j++) {
+						V += (float)Math.pow(freqBandEnergyHistory[i][j] - E, 2);						
+					}
+					V /= freqBandEnergyHistory.length;
 					
-					//Es[ subbandIndex ] += B[i];
-					Es[ subbandIndex ] += Math.sqrt( re*re + im*im );
-
-					// switch to next subband					
-					if( (i+1) % SUBBAND_SIZE == 0){
-						
-						//set average amplitude of this subband
-						//TODO: infinity bug...
-						if(Es[ subbandIndex ] != 0 ) Es[ subbandIndex ] *= magicNumber;
-
-						
-						float averageEI = this.calculateHistoryAverage( subbandIndex ); 
-						
-						//has subband a beat?
-						if( Es[ subbandIndex ] > C * averageEI ){
-							isBeat = true;
-							//System.out.println(Es[ subbandIndex ] +">"+ (C * averageEI));
-						}
-						
-						//System.out.println(Es[ subbandIndex ] +">"+ (C * averageEI));
-						
-						
-						//update history
-						addAmplitudeToHistory( subbandIndex, Es[ subbandIndex ] );
-						
-					} 
+					float C = (-0.0025714f * V) + 1.5142857f;
+					
+					float d = (float)Math.max(e * MAGIC_MULTIPLIER - C * E, 0);
+					
+					float D = 0;		
+					int countNonZero = 0;
+					for (int j = 0; j < freqBandDifferenceHistory.length; j++) {
+						if( freqBandDifferenceHistory[i][j] > 0 ){
+							D += freqBandDifferenceHistory[i][j];
+							countNonZero++;
+						}			
+					}									
+					D = (countNonZero>0)? D / countNonZero : 0;
+					
+					float diffdiff = (float)Math.max(d - D, 0);
+					
+					timeBand[i] += dTime;
+					
+					//System.out.println(time);
+					
+									
+					if( timeBand[i] >= TIME_LIMIT && diffdiff > 0 ){
+						timeBand[i] = 0;
+						onSetBuffer[i] = true;
+						//isBeat = true;
+					}else{
+						onSetBuffer[i] = false;
+					}
+					
+					freqBandEnergyHistory[i][insertAt] = e;
+					freqBandDifferenceHistory[i][insertAt] = d;
+					
 				}
-				if(isBeat)beat();
-				//break;
 				
+				insertAt++;
+				if (insertAt >= FREQ / TIME_SIZE){
+					insertAt = 0;
+				}
+				
+				//boolean isBeat = false;
+				
+				//isBeat = isSnare(fft, onSetBuffer);
+				
+				switch(MODUS){
+					case 0:
+						if(isKick(fft,onSetBuffer))beat();
+						break;
+					case 1:
+						if(isKick(fft,onSetBuffer))beat();
+						break;
+					case 2:
+						if(isSnare(fft,onSetBuffer))beat();
+						break;
+					case 3:
+						if(isSnare(fft,onSetBuffer) && isKick(fft,onSetBuffer))beat();
+						break;
+					case 4:
+						if(isHat(fft,onSetBuffer))beat();
+						break;
+					case 5:
+						if( isHat(fft,onSetBuffer) && isKick(fft,onSetBuffer))beat();
+						break;
+					case 6:
+						if( isHat(fft,onSetBuffer) && isSnare(fft,onSetBuffer))beat();
+						break;
+					case 7:
+						if( isKick(fft,onSetBuffer) && isHat(fft,onSetBuffer) && isSnare(fft,onSetBuffer))beat();
+						break;
+				}
 				
 				
 				
 			}
+				
+				
+				
+			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -136,23 +171,34 @@ public class FFTBeatDetection extends AbstractBeatTracker {
 
 	}
 	
-	private float calculateHistoryAverage( int subband ){
-		float averageEI = 0f;
-		for (int i = 0; i < HISTORY_SIZE; i++) {
-			averageEI += Ei[ subband ][ i ]; 
+	public boolean isRange(int low, int high, int threshold, boolean[] onSetBuffer){
+		int num = 0;
+		for (int i = low; i < high + 1; i++)
+		{
+			if( onSetBuffer[i] ){
+				num++;
+			}
 		}
-		return averageEI/HISTORY_SIZE;
+		return num >= threshold;
 	}
 	
-	private void addAmplitudeToHistory( int subband, float amplitude ){
-		int i = EiIndexes[ subband ];
-		Ei[ subband ][ i ] = amplitude;
-		
-		//update index
-		EiIndexes[ subband ]++;
-		if( EiIndexes[ subband ] >= HISTORY_SIZE ) EiIndexes[ subband ] = 0;
+	public boolean isSnare(FFT spect,  boolean[] onSetBuffer){		
+		int lower = 8 >= spect.avgSize() ? spect.avgSize() : 8;
+		int upper = spect.avgSize() - 1;
+		int thresh = (upper - lower) / 3 + 1;
+		return isRange(lower, upper, thresh, onSetBuffer);
 	}
 	
+	public boolean isKick(FFT spect,  boolean[] onSetBuffer){		
+		int upper = 6 >= spect.avgSize() ? spect.avgSize() : 6;
+		return isRange(1, upper, 2, onSetBuffer);
+	}	
+	
+	public boolean isHat(FFT spect,  boolean[] onSetBuffer){		
+		int lower = spect.avgSize() - 7 < 0 ? 0 : spect.avgSize() - 7;
+		int upper = spect.avgSize() - 1;
+		return isRange(lower, upper, 1, onSetBuffer);
+	}	
 	
 
 }

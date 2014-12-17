@@ -1,0 +1,59 @@
+package ch.fhnw.tvver;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.EnumSet;
+
+import javax.sound.sampled.UnsupportedAudioFileException;
+
+import ddf.minim.analysis.FFT;
+
+public class FFTBeatDetection extends AbstractBeatTracker {
+
+
+	final  int    FREQ      = (int)getSampleRate();
+	final  int   TIME_SIZE  = 1024;
+	
+	public FFTBeatDetection(File track)throws UnsupportedAudioFileException, IOException {
+		super(track, EnumSet.of(Flags.REPORT));		
+		
+		
+		
+	}
+	
+	
+	
+	
+	
+	@Override
+	public void run() {
+		try{
+			
+			float[] buffer = new float[TIME_SIZE];
+			FFT fft = new FFT(TIME_SIZE,FREQ);
+			fft.logAverages(60, 3); //?
+			int bands = fft.avgSize();
+			boolean[] onSetHist = new boolean[ bands];
+			float[][] freqBandEnergyHistory     = new float[ bands ][ FREQ / TIME_SIZE ];
+			float[][] freqBandDifferenceHistory = new float[ bands ][ FREQ / TIME_SIZE ];
+			
+			float[] timeBand = new float[ bands ];
+			
+			while( getSamples(buffer) ){
+				
+			}
+				
+				
+				
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+	
+	
+	
+
+}
