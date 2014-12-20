@@ -6,37 +6,17 @@ import java.util.EnumSet;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
 
-import ddf.minim.analysis.FFT;
+import at.ofai.music.audio.FFT;
+
+//import ddf.minim.analysis.FFT;
 
 public class FFTBeatDetection extends AbstractBeatTracker {
 
-	final  int   FREQ       = (int)getSampleRate();
+	final  int   SAMPLE_RATE = (int)getSampleRate();	
+	final  int   SAMPLE_SIZE   = 1024;
 	
-//	//score: 2.4885497	
-//	final  int   TIME_SIZE  = 1024;
-//	final  float TIME_LIMIT = 0.4f;	
-//	final static float MAGIC_MULTIPLIER = 1f;
-//	final boolean USE_WINDOW = false;
-//	final int MIN_BANDWIDTH = 60;
-//	final int BANDS_PER_OCTAVE = 3;
-//	final int MODUS = 1;
-	
-// score: 2.918827	
-//	final  int   TIME_SIZE  = 2048;
-//	final  float TIME_LIMIT = 0.4f;	
-//	final static float MAGIC_MULTIPLIER = 1f;
-//	final boolean USE_WINDOW = false;
-//	final int MIN_BANDWIDTH = 43;
-//	final int BANDS_PER_OCTAVE = 1;
-//	final int MODUS = 1;
-	
-	final  int   TIME_SIZE  = 2048;
-	final  float TIME_LIMIT = 0.4f;	
-	final static float MAGIC_MULTIPLIER = 1f;
-	final boolean USE_WINDOW = false;
-	final int MIN_BANDWIDTH = 30;
-	final int BANDS_PER_OCTAVE = 2;
-	final int MODUS = 1;
+	final float HOP_TIME  = 0.010f;
+	final float FFT_TIME  = 0.04644f;
 	
 	public FFTBeatDetection(File track)throws UnsupportedAudioFileException, IOException {
 		super(track, EnumSet.of(Flags.REPORT));		
@@ -53,152 +33,67 @@ public class FFTBeatDetection extends AbstractBeatTracker {
 	public void run() {
 		try{
 			
-			float[] buffer = new float[TIME_SIZE];
-			FFT fft = new FFT(TIME_SIZE,FREQ);
-			if(USE_WINDOW)fft.window( FFT.HAMMING );
-			fft.logAverages(MIN_BANDWIDTH, BANDS_PER_OCTAVE); //?
+			int hopSize = (int) Math.round(SAMPLE_RATE * HOP_TIME);
+			int fftSize = (int) Math.round( Math.pow(2, Math.round( Math.log( FFT_TIME * SAMPLE_RATE) / Math.log(2) ) ) );
 			
-			int bands = fft.avgSize();
-			boolean[] onSetBuffer = new boolean[ bands];
-			float[][] freqBandEnergyHistory     = new float[ bands ][ FREQ / TIME_SIZE ];
-			float[][] freqBandDifferenceHistory = new float[ bands ][ FREQ / TIME_SIZE ];			
-			float[] timeBand = new float[ bands ];
+			//makeFreqMap------------------------------
+			int[] freqMap = new int[fftSize/2+1];
+			double binWidth = SAMPLE_RATE / fftSize;
+			int crossoverBin = (int)(2 / (Math.pow(2, 1/12.0) - 1));
+			int crossoverMidi = (int)Math.round( Math.log( crossoverBin * binWidth / 440 ) / Math.log(2) * 12 + 69);
+			int i = 0;
+			while (i <= crossoverBin)freqMap[i++] = i;
+			while (i <= fftSize/2) {
+				double midi = Math.log(i*binWidth/440) / Math.log(2) * 12 + 69;
+				if (midi > 127)	midi = 127;
+				freqMap[i++] = crossoverBin + (int)Math.round(midi) - crossoverMidi;
+			}
+			int freqMapSize = freqMap[i-1] + 1;
+			//------------------------------------------
 			
-			float dTime = (float) TIME_SIZE / FREQ; 
+			int buffSize = hopSize * 2;
 			
-			int insertAt = 0;
+			//init buffers
+			float[] inputBuffer = new float[buffSize];
+			float[] circBuffer  = new float[fftSize];
+			float[] reBuffer    = new float[fftSize];
+			float[] imBuffer    = new float[fftSize];
+			float[] prevPhase   = new float[fftSize];
+			float[] prevPrevPhase = new float[fftSize];
+			float[] prevFrame   = new float[fftSize];
 			
+			//init window
+			double[] window = FFT.makeWindow(FFT.HAMMING, fftSize, fftSize);
+			for (int j=0; j < fftSize; j++)	window[j] *= Math.sqrt(fftSize);
+			
+			//init frames
+			int totalFrames = (int) (3600 / HOP_TIME);			
+			float[] newFrame = new float[freqMapSize];
+			float[][] frames = new float[totalFrames][freqMapSize];
+			
+			
+			int energyOversampleFactor = 2;
+			float[] energy = new float[totalFrames*energyOversampleFactor];
+			float[] phaseDeviation = new float[totalFrames];
+			float[] spectralFlux   = new float[totalFrames];
+			int frameCount = 0;
+			int cbIndex = 0;
+			int frameRMS = 0;
+			int ltAverage = 0;
+			
+			
+			float[] buffer =  new float[1];
 			while( getSamples(buffer) ){
 				
-				fft.forward( buffer );
-				//float instant, E, V, C, diff, dAvg, diff2;
-				for (int i = 0; i < freqBandEnergyHistory.length; i++) {
-					float e = fft.getAvg(i);
-					
-					float E = 0;
-					for (int j = 0; j < freqBandEnergyHistory.length; j++) {
-						E += freqBandEnergyHistory[i][j];
-					}
-					E /= freqBandEnergyHistory.length;
-					
-					float V = 0;
-					for (int j = 0; j < freqBandEnergyHistory.length; j++) {
-						V += (float)Math.pow(freqBandEnergyHistory[i][j] - E, 2);						
-					}
-					V /= freqBandEnergyHistory.length;
-					
-					float C = (-0.0025714f * V) + 1.5142857f;
-					
-					float d = (float)Math.max(e * MAGIC_MULTIPLIER - C * E, 0);
-					
-					float D = 0;		
-					int countNonZero = 0;
-					for (int j = 0; j < freqBandDifferenceHistory.length; j++) {
-						if( freqBandDifferenceHistory[i][j] > 0 ){
-							D += freqBandDifferenceHistory[i][j];
-							countNonZero++;
-						}			
-					}									
-					D = (countNonZero>0)? D / countNonZero : 0;
-					
-					float diffdiff = (float)Math.max(d - D, 0);
-					
-					timeBand[i] += dTime;
-					
-					//System.out.println(time);
-					
-									
-					if( timeBand[i] >= TIME_LIMIT && diffdiff > 0 ){
-						timeBand[i] = 0;
-						onSetBuffer[i] = true;
-						//isBeat = true;
-					}else{
-						onSetBuffer[i] = false;
-					}
-					
-					freqBandEnergyHistory[i][insertAt] = e;
-					freqBandDifferenceHistory[i][insertAt] = d;
-					
-				}
-				
-				insertAt++;
-				if (insertAt >= FREQ / TIME_SIZE){
-					insertAt = 0;
-				}
-				
-				//boolean isBeat = false;
-				
-				//isBeat = isSnare(fft, onSetBuffer);
-				
-				switch(MODUS){
-					case 0:
-						if(isKick(fft,onSetBuffer))beat();
-						break;
-					case 1:
-						if(isKick(fft,onSetBuffer))beat();
-						break;
-					case 2:
-						if(isSnare(fft,onSetBuffer))beat();
-						break;
-					case 3:
-						if(isSnare(fft,onSetBuffer) && isKick(fft,onSetBuffer))beat();
-						break;
-					case 4:
-						if(isHat(fft,onSetBuffer))beat();
-						break;
-					case 5:
-						if( isHat(fft,onSetBuffer) && isKick(fft,onSetBuffer))beat();
-						break;
-					case 6:
-						if( isHat(fft,onSetBuffer) && isSnare(fft,onSetBuffer))beat();
-						break;
-					case 7:
-						if( isKick(fft,onSetBuffer) && isHat(fft,onSetBuffer) && isSnare(fft,onSetBuffer))beat();
-						break;
-				}
-				
-				
-				
 			}
-				
-				
-				
-			
+		
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
 	}
-	
-	public boolean isRange(int low, int high, int threshold, boolean[] onSetBuffer){
-		int num = 0;
-		for (int i = low; i < high + 1; i++)
-		{
-			if( onSetBuffer[i] ){
-				num++;
-			}
-		}
-		return num >= threshold;
-	}
-	
-	public boolean isSnare(FFT spect,  boolean[] onSetBuffer){		
-		int lower = 8 >= spect.avgSize() ? spect.avgSize() : 8;
-		int upper = spect.avgSize() - 1;
-		int thresh = (upper - lower) / 3 + 1;
-		return isRange(lower, upper, thresh, onSetBuffer);
-	}
-	
-	public boolean isKick(FFT spect,  boolean[] onSetBuffer){		
-		int upper = 6 >= spect.avgSize() ? spect.avgSize() : 6;
-		return isRange(1, upper, 2, onSetBuffer);
-	}	
-	
-	public boolean isHat(FFT spect,  boolean[] onSetBuffer){		
-		int lower = spect.avgSize() - 7 < 0 ? 0 : spect.avgSize() - 7;
-		int upper = spect.avgSize() - 1;
-		return isRange(lower, upper, 1, onSetBuffer);
-	}	
+
 	
 
 }

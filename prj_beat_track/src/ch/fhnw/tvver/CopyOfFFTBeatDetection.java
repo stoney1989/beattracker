@@ -13,9 +13,9 @@ public class CopyOfFFTBeatDetection extends AbstractBeatTracker {
 	
 	final static int SUBBAND_SIZE = 16;
 	final static int HISTORY_SIZE = 43;
-	final static int BUFFER_SIZE = 1024;
+	final static int BUFFER_SIZE = 2048;
 	
-	final static float C = 3f;
+	final static float C = 1.2f;
 	
 	// 1024 / 32 = 32
 	final static int NUMBER_OF_SUBBANDS = BUFFER_SIZE / SUBBAND_SIZE;
@@ -82,6 +82,8 @@ public class CopyOfFFTBeatDetection extends AbstractBeatTracker {
 				float[] Es = new float[ NUMBER_OF_SUBBANDS  ];
 				boolean isBeat = false;
 				
+				fft[0] = fft[1] = 0f;
+				
 				for (int i = 0; i < fft.length / 2; i++) {
 					int index = i*2;
 					float re = fft[ index    ];
@@ -138,10 +140,15 @@ public class CopyOfFFTBeatDetection extends AbstractBeatTracker {
 	
 	private float calculateHistoryAverage( int subband ){
 		float averageEI = 0f;
+		int nz = 0;
 		for (int i = 0; i < HISTORY_SIZE; i++) {
-			averageEI += Ei[ subband ][ i ]; 
+			if(Ei[ subband ][ i ] != 0){
+				averageEI += Ei[ subband ][ i ];
+				nz++;
+			}
+			 
 		}
-		return averageEI/HISTORY_SIZE;
+		return (nz>0)?averageEI/HISTORY_SIZE:0;
 	}
 	
 	private void addAmplitudeToHistory( int subband, float amplitude ){

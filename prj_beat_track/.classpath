@@ -14,5 +14,6 @@
 	<classpathentry kind="lib" path="lib/tritonus_aos.jar"/>
 	<classpathentry kind="lib" path="lib/tritonus_share.jar"/>
 	<classpathentry kind="lib" path="lib/minim.jar"/>
+	<classpathentry kind="lib" path="lib/beatroot-0.5.8.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -6,39 +6,61 @@ import java.util.EnumSet;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
 
+import org.jtransforms.fft.FloatFFT_1D;
+
 public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 	
 	final  int    FREQ      = (int)getSampleRate();
 
-// score: 2.5
-//	final  int   TIME_SIZE  = 1024;
-//	final  float TIME_LIMIT = 0.3f;	
-//	final static int MAGIC_MULTIPLIER = 10;
+	//parts of the algorithm are from http://archive.gamedev.net/archive/reference/programming/features/beatdetection/index.html
 	
-//score: 2.8076863
-//	final  int   TIME_SIZE  = 512;
-//	final  float TIME_LIMIT = 0.4f;
-//	final static float MAGIC_MULTIPLIER = 10.5f;
+// average score: 4.270447951096755	
+//	final  int   TIME_SIZE  = 2048;
+//	final  float TIME_LIMIT = 0.2f;
+//	final float  D_TIME_MODIFIER = 0.5f;
+//	final  float HISTORY_SIZE_MODIFIER = 1f;
+//	final static float POWER_UP_MULTIPLIER = 8f;
+//	final boolean FILTER_FREQ = false;
+//	final float   MIN_FREQ = 0;
+//	final float   MAX_FREQ = FREQ;
 	
-// score: 2.885
-//	final  int   TIME_SIZE  = 1024;
-//	final  float TIME_LIMIT = 0.4f;
-//	final static int MAGIC_MULTIPLIER = 10;
+	// average score:	4.31801282442533
+//		final  int   TIME_SIZE  = 1024;
+//		final  float TIME_LIMIT = 0.2f;
+//		final  float D_TIME_MODIFIER = 0.5f;
+//		final  float HISTORY_SIZE_MODIFIER = 2f;
+//		final static float POWER_UP_MULTIPLIER = 7f;
+//	    final boolean FILTER_FREQ = false;
+//	    final float   MIN_FREQ = 0;
+//	    final float   MAX_FREQ = FREQ;
 
-// score: 2.9640708
-//	final  int   TIME_SIZE  = 1024;
-//	final  float TIME_LIMIT = 0.4f;
-//	final static float MAGIC_MULTIPLIER = 10.5f;
+	// average score: 4.4248636685884914	
+		final  int   TIME_SIZE  = 1536;
+		final  float TIME_LIMIT = 0.2f;
+		final float  D_TIME_MODIFIER = 0.5f;
+		final  float HISTORY_SIZE_MODIFIER = 1f;
+		final static float POWER_UP_MULTIPLIER = 8f;
+	    final boolean FILTER_FREQ = false;
+	    final float   MIN_FREQ = 0;
+	    final float   MAX_FREQ = FREQ;
 	
-// score: 3.0089693	
-	final  int   TIME_SIZE  = 2048;
-	final  float TIME_LIMIT = 0.2f;
-	final static float MAGIC_MULTIPLIER = 8f;
+	// average score:	4.3545391376201925
+//	final  int   TIME_SIZE  = 2048;
+//	final  float TIME_LIMIT = 0.2f;
+//	final  float D_TIME_MODIFIER = 0.5f;
+//	final  float HISTORY_SIZE_MODIFIER = 2f;
+//	final static float POWER_UP_MULTIPLIER = 8f;	
+//	final boolean FILTER_FREQ = true;
+//	final float   MIN_FREQ = 20;
+//	final float   MAX_FREQ = FREQ;
 
+	
+
+	private int FFT_SIZE = TIME_SIZE / 2;
+	FloatFFT_1D mFFT = new FloatFFT_1D(FFT_SIZE);
 	
 	private float[] energyHistory;
-	private float[] differenceHistory;
-	
+	private float[] differenceHistory;	
 	private float[] buffer;
 	
 	private int energyHistoryIndex;
@@ -52,8 +74,8 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 	public StatisticalStreamingBeatDetection(File track)throws UnsupportedAudioFileException, IOException {
 		super(track, EnumSet.of(Flags.REPORT));
 		 buffer            = new float[ TIME_SIZE ];
-		 energyHistory     = new float[ FREQ / TIME_SIZE ];
-		 differenceHistory = new float[ FREQ / TIME_SIZE ];
+		 energyHistory     = new float[ (int) ((FREQ / TIME_SIZE)*HISTORY_SIZE_MODIFIER) ];
+		 differenceHistory = new float[ (int) ((FREQ / TIME_SIZE)*HISTORY_SIZE_MODIFIER) ];
 		 energyHistoryIndex     = 0;
 		 differenceHistoryIndex = 0;
 		 time = 0;
@@ -63,43 +85,47 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 	
 	@Override
 	public void run() {
-		//System.out.println("asdfasdfasfd");
+	
+		
 		
 		
 		try {
 			while( getSamples(buffer) ){
+				
+				if(FILTER_FREQ)filterFrequencies(MIN_FREQ,MAX_FREQ);
+				
+				//calculate instant energy of current sample
 				float e = calculateInstantSoundEnergy( buffer );
+				
+				//calculate average of energy history
 				float E = calculateLocalAverageEnergy();
 				
+				//calculate variance of energy history
 				float V = calculateVariance(E);
-				float C = (-0.0025714f * V) + 1.5142857f;
 				
-				float d = (float)Math.max(e - C * E, 0);				
+				
+				// linear degression of constant 'C' with variance
+				float C = 1.35f;//(-0.0025714f * V) + 1.5142857f;
+				
+				//difference from instant energy to 'historic' energy
+				float d = (float)Math.max(e - C * E, 0);			
+				
+				//average 'historic' difference 
 				float D = calculateAverageDifference();
 				
+				//difference of the difference between current difference and average difference
 				float diffdiff = (float)Math.max(d - D, 0);
 				
-				time += dTime;
+				//time between one beat to the next
+				time += dTime*D_TIME_MODIFIER;			
 				
-				//System.out.println(time);
-				
-								
 				if( time >= TIME_LIMIT && diffdiff > 0 && e > 2 ){
 					time = 0;
 					beat();
-					//isBeat = true;
-				}
-				
+				}				
 				
 				addToHistory(e, energyHistory, energyHistoryIndex);
 				addToHistory(d, differenceHistory, differenceHistoryIndex);
-				//addBufferToHistory(buffer);
-				
-				//if(e > (c*E))System.out.println( "Sound Energy: "+e+" Energy Average: "+(c*E) );
-				//if(e>(c*E))beat();
-				
-				
-				//System.out.println(c);
 				
 			}
 		} catch (IOException e) {
@@ -136,13 +162,6 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 		if( index >= history.length )index = 0;
 	}
 	
-//	private void addBufferToHistory( float[] buffer ){
-//		System.out.println(historyIndex);
-//		System.arraycopy(buffer, 0, energyHistory, historyIndex, 1024);
-//		historyIndex+=1024;
-//		if( historyIndex >= 44032 )historyIndex = 0;
-//		//energyHistory[ historyIndex ] = e;
-//	}
 	
 	private static float calculateInstantSoundEnergy( float[] buffer ){
 		float e = 0;
@@ -150,7 +169,24 @@ public class StatisticalStreamingBeatDetection extends AbstractBeatTracker {
 			e+=buffer[i]*buffer[i];
 		}
 		e/=buffer.length; 
-		return (float) Math.sqrt(e) * MAGIC_MULTIPLIER;
+		return (float) Math.sqrt(e) * POWER_UP_MULTIPLIER;
+	}
+	
+	private void filterFrequencies(float freqMin, float freqMax){
+		mFFT.realForward(buffer);
+		for(int fftBin = 0; fftBin < FFT_SIZE; fftBin++){
+			float frequency = (float)fftBin * FREQ / (float)FFT_SIZE;
+			if(frequency  < freqMin || frequency > freqMax){
+				 int real = 2 * fftBin;
+			     int imaginary = 2 * fftBin + 1;
+			     
+			     buffer[real]      = 0;
+			     buffer[imaginary] = 0;
+			}
+		}
+		
+		
+		mFFT.realInverse(buffer, true);	
 	}
 	
 	private float calculateVariance(float E){

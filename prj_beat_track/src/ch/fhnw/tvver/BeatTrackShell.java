@@ -7,7 +7,9 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 
 import javax.sound.sampled.AudioFileFormat.Type;
@@ -41,8 +43,10 @@ public final class BeatTrackShell {
 	private int                         pcmSize;
 	private int                         samplePos;
 	
+	private static ArrayList<Double> scores = new ArrayList<>();
+	
 	private static  float averageScore = 0;
-	private static  int   scores = 0;
+	//private static  int   scores = 0;
 
 	BeatTrackShell(File track, EnumSet<Flags> flags) throws UnsupportedAudioFileException, IOException {
 		this.flags = flags;
@@ -181,7 +185,7 @@ public final class BeatTrackShell {
 		double avgLat = numDetectedBeats == 0 ? 0 : sumLat / numDetectedBeats;
 //		result += time + SEP;
 		result += numRefBeats + SEP;
-//		result += + (60 * numRefBeats) / time + SEP;
+		result += + (60 * numRefBeats) / time + SEP;
 		result += + numTrueDetectedBeats + SEP;
 		result += + numFalseDetectedBeats + SEP;
 //		result += + (int)(minLat * 1000) + SEP;
@@ -193,13 +197,15 @@ public final class BeatTrackShell {
 		double q             = detectedBeats / numRefBeats;
 		double l             = latency < MAX_LATENCY ? latency / MAX_LATENCY : 1;
 
-//		result += q + SEP;
-//		result += l + SEP;
-		float score = (float)( (1 + (5 * Math.min(q / l, 1))) );
+		result += q + SEP;
+		result += l + SEP;
+		double score = (double)( (1 + (5 * Math.min(q / l, 1))) );
 		result += score + SEP;
 
-		averageScore += score;
-		scores++;
+		//averageScore += score;
+		//scores++;
+		
+		scores.add(score);
 		
 		return result;
 	}
@@ -238,7 +244,12 @@ public final class BeatTrackShell {
 
 		report.close();
 		
-		System.out.println("average score: "+(averageScore/(float)scores));
+		Collections.sort(scores);
+		for (int i = 2; i < scores.size(); i++) {
+			averageScore+=scores.get(i);
+		}
+		
+		System.out.println("average score: "+(averageScore/(double)(scores.size()-3)));
 	}
 
 	private static void run(Class<AbstractBeatTracker> cls, PrintWriter report, File file) {
